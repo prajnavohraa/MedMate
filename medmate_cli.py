@@ -10,6 +10,16 @@ mycur.execute("USE medmate")
 def customer_signup():
     customer_name=input("Your Name: ")
     customer_phone_number=input("Phone Number: ")
+    customer_addres=input("Address: ")
+    customer_password=input("Create a Password: ")
+    customer_password_again=input("Re-enter Your Password: ")
+    prompt=input("Type YES/yes to continue: ")
+    if prompt=="YES":
+        if(customer_password==customer_password_again):
+            print("Welcome to MedMate. Your Account has Successfully been created. You are logged in as"+customer_name)
+        else:
+            print("Your passwords do not match. Please try again")
+
     
 
 #Helper function to find maximum length of column needed for display
