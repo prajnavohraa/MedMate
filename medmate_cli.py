@@ -6,21 +6,34 @@ mycur.execute("USE medmate")
 
 
 # Customer Sign Up
-
 def customer_signup():
     customer_name=input("Your Name: ")
+    customer_age=input("Age: ")    
     customer_phone_number=input("Phone Number: ")
-    customer_addres=input("Address: ")
+    customer_address=input("Address: ")
     customer_password=input("Create a Password: ")
     customer_password_again=input("Re-enter Your Password: ")
     prompt=input("Type YES/yes to continue: ")
-    if prompt=="YES":
+    if prompt=="YES" or prompt=='yes':
         if(customer_password==customer_password_again):
             print("Welcome to MedMate. Your Account has Successfully been created. You are logged in as"+customer_name)
+            q="INSERT INTO customer values('"+customer_name+"', '"+customer_password+"', '"+customer_address+"', '"+customer_phone_number+"', '"+customer_age+"')"
+            mycur.execute(q)
+            mydb.commit()
         else:
             print("Your passwords do not match. Please try again")
 
-    
+# Customer Login
+def Customer_login():
+    customer_ID = input("Customer ID: ")
+    customer_Password = input("Customer Password: ")
+    #i dont know how to get values from database to cli
+
+# Manager Login
+def manager_login():
+    manager_ID = input("Manager ID: ")
+    manager_Password = input("Manager Password: ")
+    #i dont know how to get values from database to cli
 
 #Helper function to find maximum length of column needed for display
 def find_max_col_length(recs, col_index, col_name):
@@ -55,6 +68,36 @@ def display_table(recs, table_desciption):
     for row in recs:
         print(boundary % row)
     print(separator)
+
+#added section--------------------
+
+#diverse queries section
+def count_on_mode_of_payment():
+    st='''SELECT modeOfPayment as “Mode of Payment”, count(*) “Number Of Orders” 
+    FROM billingdetails 
+    GROUP BY modeOfPayment;'''
+    mycur.execute(st)
+    recs=mycur.fetchall()
+    if len(recs)==0:
+        print("No records found")
+    else:
+        print("Counting the number of orders with mode of payment as COD/UPI/Card") 
+        display_table(recs, mycur.description)
+
+def carts_eligible_for_discount():
+    st='''SELECT customer.custName AS "Customers Eligible for Discount", cart.totalCost AS "Cart Cost (Rs)"FROM customer 
+    INNER JOIN cart ON cart.cartCustomerID=customer.customerID 
+    WHERE cart.totalCost>5000 
+    ORDER BY cart.totalCost DESC;'''
+    mycur.execute(st)
+    recs=mycur.fetchall()
+    if len(recs)==0:
+        print("No records found")
+    else:
+        print("Displaying customer names and their cart's total cost who are eligible for a discount (with total cart cost greater than 5000)") 
+        display_table(recs, mycur.description)
+
+#added section--------------------
 
 def embedded_query1(companyID):
     st='''SELECT medicine.drugID, medicine.drugName, drugManufacturer.manuCompanyName 
@@ -203,9 +246,6 @@ def insertion_trigger():
     else:
         print("Displaying records of billing details: ") 
         display_table(recs, mycur.description)
-
-
-
 
 ans1='y'
 ans2='y'
