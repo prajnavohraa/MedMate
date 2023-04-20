@@ -1,4 +1,5 @@
 import mysql.connector
+from mysql.connector import errors
 mydb=mysql.connector.connect(host = "localhost", user = "root", passwd = "12345")
 
 mycur=mydb.cursor()
@@ -7,21 +8,35 @@ mycur.execute("USE medmate")
 
 # Customer Sign Up
 def customer_signup():
-    customer_name=input("Your Name: ")
-    customer_age=input("Age: ")    
-    customer_phone_number=input("Phone Number: ")
-    customer_address=input("Address: ")
-    customer_password=input("Create a Password: ")
-    customer_password_again=input("Re-enter Your Password: ")
-    prompt=input("Type YES/yes to continue: ")
-    if prompt=="YES" or prompt=='yes':
-        if(customer_password==customer_password_again):
-            print("Welcome to MedMate. Your Account has Successfully been created. You are logged in as"+customer_name)
-            q="INSERT INTO customer values('"+customer_name+"', '"+customer_password+"', '"+customer_address+"', '"+customer_phone_number+"', '"+customer_age+"')"
-            mycur.execute(q)
-            mydb.commit()
-        else:
-            print("Your passwords do not match. Please try again")
+    flag1=1
+    while flag1==1 :
+        customer_name=input("Your Name: ")
+        customer_age=input("Age: ")    
+        customer_phone_number=input("Phone Number: ")
+        customer_address=input("Address: ")
+        flag2=1
+        while flag2==1:
+            customer_password=input("Create a Password: ")
+            customer_password_again=input("Re-enter Your Password: ")
+            prompt=input("Type YES/yes to continue: ")
+            if prompt=="YES" or prompt=='yes':
+                if(customer_password==customer_password_again):
+                    try:
+                        q="INSERT INTO customer values(DEFAULT, '"+customer_name+"', '"+customer_password+"', '"+customer_address+"', '"+customer_phone_number+"', '"+customer_age+"')"
+                        mycur.execute(q)
+                        mydb.commit()
+                        flag1=0
+                        flag2=0
+                        print("Welcome to MedMate. Your Account has Successfully been created. PLease Proceed to Login")
+                        Customer_login()
+                    except errors.IntegrityError as e:
+                        print("ERROR: ")
+                        print(e)
+                        flag2=0
+                        print("Please Try again: ")
+                else:
+                    print("Your passwords do not match. Please type the password again")
+                    flag1=0
 
 # Customer Login
 def Customer_login():
@@ -249,6 +264,24 @@ def insertion_trigger():
 
 ans1='y'
 ans2='y'
+
+choice0=int(input('''WELCOME TO MEDMATE. YOUR ONLINE MEDICAL STORE. PLEASE ENTER THE REQUIRED NUMBER:
+1. CUSTOMER
+2. EMPLOYEE
+Enter Choice: '''))
+if(choice0==1):
+    flag=1
+    while(flag==1):
+        choice01=int(input('''  1. LOGIN\n 2. SIGNUP\n Enter Choice: '''))
+        if(choice01==1):
+            Customer_login()
+            flag=0
+        elif(choice01==2):
+            customer_signup()
+            flag=0
+        else:
+            print("WRONG CHOICE! Please Choose from the choices given: 1 or 2")
+
 choice1=int(input("Welcome to MedMate! Please choose:\n 1.Login as customer\n 2.Login as manager\n"))
 if choice1==1:
     while ans1=='y':
