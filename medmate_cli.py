@@ -5,7 +5,6 @@ mydb=mysql.connector.connect(host = "localhost", user = "root", passwd = "12345"
 mycur=mydb.cursor()
 mycur.execute("USE medmate")
 
-
 # Customer Sign Up
 def customer_signup(signup_flag):
     flag1=1
@@ -61,10 +60,25 @@ def Customer_login(login_flag):
     return [login_flag, recs[2]]
 
 # Manager Login
-def manager_login():
-    manager_ID = input("Manager ID: ")
-    manager_Password = input("Manager Password: ")
-    #i dont know how to get values from database to cli
+def employee_login(login_flag):
+    flag=1
+    while(flag==1):
+        employee_phone = input("Enter Phone Number:  ")
+        employee_password = input("Enter Password: ")
+        st="SELECT employeePassword, employeeUsername, employeeID from employee where employeePhoneNumber="+employee_phone
+        mycur.execute(st)
+        recs=mycur.fetchone()
+        if recs==None:
+            print("No such account. Please Try again")
+            continue
+        if recs[0]==employee_password:
+            print("Successfully Logged in as "+ recs[1]+"\n")
+            login_flag=True
+            flag=0
+        else:
+            print("Wrong Password. Please Try again")
+    return [login_flag, recs[2]]
+    
 
 #Helper function to find maximum length of column needed for display
 def find_max_col_length(recs, col_index, col_name):
@@ -182,7 +196,7 @@ def manager_query1():
 
 
 def check_manager(id):
-    st="SELECT managerID from employee where employeeID="+id
+    st="SELECT managerID from employee where employeeID="+str(id)
     mycur.execute(st)
     recs=mycur.fetchall()
     if len(recs)==0:
@@ -294,64 +308,8 @@ def customer_queries_options(id):
     else:
         print("Wrong Choice\n")
     
-
-
-
-ans1='y'
-ans2='y'
-
-choice0=int(input('''WELCOME TO MEDMATE. YOUR ONLINE MEDICAL STORE. PLEASE ENTER THE REQUIRED NUMBER:
-1. CUSTOMER
-2. EMPLOYEE
-Enter Choice: '''))
-if(choice0==1):
-    flag=1
-    while(flag==1):
-        choice01=int(input('''1. LOGIN\n2. SIGNUP\nEnter Choice: '''))
-        if(choice01==1):
-            login_flag=False
-            x=Customer_login(login_flag)
-            if(x[0]==True):
-                flag=0
-                while ans1=="y":
-                    customer_queries_options(x[1])
-                    ans1=str(input("Do you want to continue? y/n"))
-                
-        elif(choice01==2):
-            signup_flag=False
-            x=customer_signup(signup_flag)
-            flag=0
-            if x==True:
-                login_flag=False
-                y=Customer_login(login_flag)
-                if(y[0]==True):
-                    flag=0
-                    while ans1=="y":
-                        customer_queries_options(y[1])
-                        ans1=str(input("Do you want to continue? y/n"))
-        else:
-            print("WRONG CHOICE! Please Choose from the choices given: 1 or 2")
-
-# choice1=int(input("Welcome to MedMate! Please choose:\n 1.Login as customer\n 2.Login as manager\n"))
-# if choice1==1:
-    # while ans1=='y':
-        # #if choice1==1:
-        # choice2=int(input('''Please select the query you want to run:\n 
-        # 1. Display all drugs sold by a particular drug manufacturer\n 
-        # 2. Display records of all medicines\n
-        # '''))
-        # if choice2==1:
-        #     companyID=str(input("Enter the drug manufacturer ID: "))
-        #     embedded_query1(companyID)
-        # elif choice2==2:
-        #     show_medicines()
-        # else:
-        #     print("Wrong Choice\n")
-        # ans1=str(input("Do you want to continue? y/n"))
-
-
-elif choice1==2:
-    id=str(input("Enter your employeeID: "))
+def employee_query_options(id):
+    ans2='y'
     if check_manager(id):
         while ans2=='y': 
             choice2=int(input('''Please select the query you want to run:\n 
@@ -388,5 +346,54 @@ elif choice1==2:
             else:
                 print("Wrong choice\n")
             ans2=str(input("Do you want to continue? y/n"))
+
+
+ans1='y'
+
+
+choice0=int(input('''WELCOME TO MEDMATE. YOUR ONLINE MEDICAL STORE. PLEASE ENTER THE REQUIRED NUMBER:
+1. CUSTOMER
+2. EMPLOYEE
+Enter Choice: '''))
+if(choice0==1):
+    flag=1
+    while(flag==1):
+        choice01=int(input('''1. LOGIN\n2. SIGNUP\nEnter Choice: '''))
+        if(choice01==1):
+            login_flag=False
+            x=Customer_login(login_flag)
+            if(x[0]==True):
+                flag=0
+                while ans1=="y":
+                    customer_queries_options(x[1])
+                    ans1=str(input("Do you want to continue? y/n"))
+                
+        elif(choice01==2):
+            signup_flag=False
+            x=customer_signup(signup_flag)
+            flag=0
+            if x==True:
+                login_flag=False
+                y=Customer_login(login_flag)
+                if(y[0]==True):
+                    flag=0
+                    while ans1=="y":
+                        customer_queries_options(y[1])
+                        ans1=str(input("Do you want to continue? y/n"))
+        else:
+            print("WRONG CHOICE! Please Choose from the choices given: 1 or 2")
+
+elif(choice0==2):
+    flag=1
+    while(flag==1):
+        print("Please Login to your account:")
+        login_flag=False
+        x=employee_login(login_flag)
+        if(x[0]==True):
+            flag=0
+            while ans1=="y":
+                employee_query_options(x[1])
+                ans1=str(input("Do you want to continue? y/n"))
+
 
 print("Bye Bye")
