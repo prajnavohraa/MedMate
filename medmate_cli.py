@@ -7,7 +7,7 @@ mycur.execute("USE medmate")
 
 
 # Customer Sign Up
-def customer_signup():
+def customer_signup(signup_flag):
     flag1=1
     while flag1==1 :
         customer_name=input("Your Name: ")
@@ -27,8 +27,8 @@ def customer_signup():
                         mydb.commit()
                         flag1=0
                         flag2=0
-                        print("Welcome to MedMate. Your Account has Successfully been created. PLease Proceed to Login")
-                        Customer_login()
+                        print("Welcome to MedMate. Your Account has Successfully been created. Please Proceed to Login")
+                        signup_flag=True
                     except errors.IntegrityError as e:
                         print("ERROR: ")
                         print(e)
@@ -37,12 +37,28 @@ def customer_signup():
                 else:
                     print("Your passwords do not match. Please type the password again")
                     flag1=0
+    return signup_flag
+            
 
 # Customer Login
-def Customer_login():
-    customer_ID = input("Customer ID: ")
-    customer_Password = input("Customer Password: ")
-    #i dont know how to get values from database to cli
+def Customer_login(login_flag):
+    flag=1
+    while(flag==1):
+        customer_phone = input("Enter Phone Number:  ")
+        customer_Password = input("Enter Password: ")
+        st="SELECT custPassword, custName, customerID from customer where custPhoneNumber="+customer_phone
+        mycur.execute(st)
+        recs=mycur.fetchone()
+        if recs==None:
+            print("No such account. Please Try again")
+            continue
+        if recs[0]==customer_Password:
+            print("Successfully Logged in as "+ recs[1]+"\n")
+            login_flag=True
+            flag=0
+        else:
+            print("Wrong Password. Please Try again")
+    return [login_flag, recs[2]]
 
 # Manager Login
 def manager_login():
@@ -262,6 +278,25 @@ def insertion_trigger():
         print("Displaying records of billing details: ") 
         display_table(recs, mycur.description)
 
+
+def customer_queries_options(id):
+    choice2=int(input(''' Welcome!
+    
+    Please choose from the below options:\n 
+    1. Display all drugs sold by a particular drug manufacturer\n 
+    2. Display records of all medicines\n
+    '''))
+    if choice2==1:
+        companyID=str(input("Enter the drug manufacturer ID: "))
+        embedded_query1(companyID)
+    elif choice2==2:
+        show_medicines()
+    else:
+        print("Wrong Choice\n")
+    
+
+
+
 ans1='y'
 ans2='y'
 
@@ -272,32 +307,47 @@ Enter Choice: '''))
 if(choice0==1):
     flag=1
     while(flag==1):
-        choice01=int(input('''  1. LOGIN\n 2. SIGNUP\n Enter Choice: '''))
+        choice01=int(input('''1. LOGIN\n2. SIGNUP\nEnter Choice: '''))
         if(choice01==1):
-            Customer_login()
-            flag=0
+            login_flag=False
+            x=Customer_login(login_flag)
+            if(x[0]==True):
+                flag=0
+                while ans1=="y":
+                    customer_queries_options(x[1])
+                    ans1=str(input("Do you want to continue? y/n"))
+                
         elif(choice01==2):
-            customer_signup()
+            signup_flag=False
+            x=customer_signup(signup_flag)
             flag=0
+            if x==True:
+                login_flag=False
+                y=Customer_login(login_flag)
+                if(y[0]==True):
+                    flag=0
+                    while ans1=="y":
+                        customer_queries_options(y[1])
+                        ans1=str(input("Do you want to continue? y/n"))
         else:
             print("WRONG CHOICE! Please Choose from the choices given: 1 or 2")
 
-choice1=int(input("Welcome to MedMate! Please choose:\n 1.Login as customer\n 2.Login as manager\n"))
-if choice1==1:
-    while ans1=='y':
-        #if choice1==1:
-        choice2=int(input('''Please select the query you want to run:\n 
-        1. Display all drugs sold by a particular drug manufacturer\n 
-        2. Display records of all medicines\n
-        '''))
-        if choice2==1:
-            companyID=str(input("Enter the drug manufacturer ID: "))
-            embedded_query1(companyID)
-        elif choice2==2:
-            show_medicines()
-        else:
-            print("Wrong Choice\n")
-        ans1=str(input("Do you want to continue? y/n"))
+# choice1=int(input("Welcome to MedMate! Please choose:\n 1.Login as customer\n 2.Login as manager\n"))
+# if choice1==1:
+    # while ans1=='y':
+        # #if choice1==1:
+        # choice2=int(input('''Please select the query you want to run:\n 
+        # 1. Display all drugs sold by a particular drug manufacturer\n 
+        # 2. Display records of all medicines\n
+        # '''))
+        # if choice2==1:
+        #     companyID=str(input("Enter the drug manufacturer ID: "))
+        #     embedded_query1(companyID)
+        # elif choice2==2:
+        #     show_medicines()
+        # else:
+        #     print("Wrong Choice\n")
+        # ans1=str(input("Do you want to continue? y/n"))
 
 
 elif choice1==2:
