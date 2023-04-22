@@ -78,7 +78,151 @@ def employee_login(login_flag):
         else:
             print("Wrong Password. Please Try again")
     return [login_flag, recs[2]]
-    
+
+#Customer Menu
+def customer_queries_options(customer_id):
+    choice2=int(input('''Please choose from the below options:
+    1. Buy Medicines
+    2. View all medicines available
+    3. View Medicines by a specific Drug Manufacturer
+    4. View Cart
+    5. Delete medicines from cart
+    6. Proceed to Checkout
+    7.Log Out
+    Enter Choice
+    '''))
+    if choice2==1:
+        st='''select medicine.drugID "MedicineID",medicine.drugName "Medicine", medicine.drugPrice "Price(Rs)", medicine.drugManufacturingDate "ManufacturingDate", 
+        medicine.drugExpiryDate "ExpiryDate", medicine.drugQuantity "Quantity", drugManufacturer.manuCompanyName "ManufacturingCompany" from medicine 
+        inner join drugManufacturer where medicine.drugCompanyID=drugManufacturer.manuCompanyID;'''
+        mycur.execute(st)
+        recs=mycur.fetchall()
+        if len(recs)==0:
+            print("No records found")
+        else:
+            print("DISPLAYING DETAILS OF ALL MEDICINES AVAILABLE: \n")
+            display_table(recs, mycur.description)
+        answer="y"
+        while answer=="y":
+            options=int(input('''1.Add Medicines to cart\n2.Back\nEnter Option: '''))
+            if options==1:
+                drug_id=input("Enter Drug ID of medicine to be added: ")
+                requested_qty=input("Enter quantity of the drug you wish to buy: ")
+                checker="SELECT cartDrugID from productinfo where cartCustomerID="+customer_id
+                mycur.execute(checker)
+                checker_records=mycur.fetchall()
+                checker_records_int=[]
+                for x in checker_records:
+                    checker_records_int+=[x[0]]
+
+                #CASE 1: IF "the cart already contains the product, then update the quantity value"
+                if(int(drug_id) in checker_records_int):
+                    try:
+                        reduce_quantity='''UPDATE medicine set drugQuantity=drugQuantity-'''+requested_qty+'''
+                                    WHERE drugID='''+drug_id+''';'''
+                        mycur.execute(reduce_quantity)
+                        update_quantity='''UPDATE productinfo set cartDrugQuantity=cartDrugQuantity+'''+requested_qty+'''
+                                    WHERE cartCustomerID='''+customer_id+''' AND cartDrugID='''+drug_id+''';'''
+                        mycur.execute(update_quantity)
+                        print("Medicine with "+drug_id+" successfully added to cart")
+                        mydb.commit()
+                        get_cart_cost="select productinfo.cartCustomerID, productinfo.cartDrugID, medicine.drugPrice, productinfo.cartDrugQuantity from productinfo inner join medicine on productinfo.cartDrugID=medicine.drugID;"
+                        mycur.execute(get_cart_cost)
+                        get_cart_cost_recs=mycur.fetchall()
+                        cart_cost=0
+                        for x in get_cart_cost_recs:
+                            if x[0]==int(customer_id):
+                                cart_cost+=(int(x[2])*int(x[3]))
+                        print("Total cost of your cart: ",cart_cost)
+                        update_cart_cost="UPDATE cart set totalCost= "+str(cart_cost)+" where cartCustomerID ="+ str(customer_id) +" ;"
+                        mycur.execute(update_cart_cost)
+                        mydb.commit()
+
+                    except mysql.connector.Error as error:
+                        print("Error:")
+                        print(error)
+                        mydb.rollback()
+            
+                else:
+                    try:
+                        reduce_quantity='''UPDATE medicine set drugQuantity=drugQuantity-'''+requested_qty+'''
+                                    WHERE drugID='''+drug_id+''';'''
+                        mycur.execute(reduce_quantity)
+                        add_medicine_to_cart= "INSERT INTO productinfo values ('"+customer_id+"','"+drug_id+"','"+requested_qty+"');"
+                        mycur.execute(add_medicine_to_cart)
+                        print("Medicine with "+drug_id+" successfully added to cart")
+                        mydb.commit()
+                        get_cart_cost="select productinfo.cartCustomerID, productinfo.cartDrugID, medicine.drugPrice, productinfo.cartDrugQuantity from productinfo inner join medicine on productinfo.cartDrugID=medicine.drugID;"
+                        mycur.execute(get_cart_cost)
+                        get_cart_cost_recs=mycur.fetchall()
+                        cart_cost=0
+                        for x in get_cart_cost_recs:
+                            if x[0]==int(customer_id):
+                                cart_cost+=(int(x[2])*int(x[3]))
+                        print("Total cost of your cart: ",cart_cost)
+                        update_cart_cost="UPDATE cart set totalCost= "+str(cart_cost)+" where cartCustomerID ="+ str(customer_id) +" ;"
+                        mycur.execute(update_cart_cost)
+                        mydb.commit()
+
+                    except mysql.connector.Error as error:
+                        print("Error:")
+                        print(error)
+                        mydb.rollback()
+                
+            elif options==2:
+                answer="n"
+            else:
+                print("Please choose options between 1 and 2 only")
+                continue
+            
+    elif choice2==2:
+        show_medicines()
+    else:
+        print("Wrong Choice\n")
+
+
+
+
+
+
+def employee_query_options(id):
+    ans2='y'
+    if check_manager(id):
+        while ans2=='y': 
+            choice2=int(input('''Please select the query you want to run:\n 
+            1. Display all drugs sold by a particular drug manufacturer\n 
+            2. Display the customer details of those who bought drugs from a particular company\n 
+            3.Display records of all employees\n
+            4. Run Olap query 1
+            5. Run Olap query 2
+            6. Run Olap query 3
+            7. Run Olap query 4
+            8. This trigger adds data to the billingdetails table as soon as an order is placed.
+            9. This trigger shows a message to the pharmacy when the quantity of a drug goes below 10 so that the pharmacy can order more drugs and re-stock\n 
+            '''))
+            if choice2==1:
+                companyID=str(input("Enter the drug manufacturer ID: "))
+                embedded_query1(companyID)
+            elif choice2==2:
+                companyID=str(input("Enter the drug manufacturer ID: "))
+                embedded_query2(companyID)
+            elif choice2==3:
+                manager_query1()
+            elif choice2==4:
+                olap1()
+            elif choice2==5:
+                olap2()
+            elif choice2==6:
+                olap3()
+            elif choice2==7:
+                olap4()
+            elif choice2==8:
+                insertion_trigger()
+            elif choice2==9:
+                updation_trigger()
+            else:
+                print("Wrong choice\n")
+            ans2=str(input("Do you want to continue? y/n")) 
 
 #Helper function to find maximum length of column needed for display
 def find_max_col_length(recs, col_index, col_name):
@@ -292,62 +436,6 @@ def insertion_trigger():
         print("Displaying records of billing details: ") 
         display_table(recs, mycur.description)
 
-
-def customer_queries_options(id):
-    choice2=int(input(''' Welcome!
-    
-    Please choose from the below options:\n 
-    1. Display all drugs sold by a particular drug manufacturer\n 
-    2. Display records of all medicines\n
-    '''))
-    if choice2==1:
-        companyID=str(input("Enter the drug manufacturer ID: "))
-        embedded_query1(companyID)
-    elif choice2==2:
-        show_medicines()
-    else:
-        print("Wrong Choice\n")
-    
-def employee_query_options(id):
-    ans2='y'
-    if check_manager(id):
-        while ans2=='y': 
-            choice2=int(input('''Please select the query you want to run:\n 
-            1. Display all drugs sold by a particular drug manufacturer\n 
-            2. Display the customer details of those who bought drugs from a particular company\n 
-            3.Display records of all emplpyees\n
-            4. Run Olap query 1
-            5. Run Olap query 2
-            6. Run Olap query 3
-            7. Run Olap query 4
-            8. This trigger adds data to the billingdetails table as soon as and order is placed.
-            9. This trigger shows a message to the pharmacy when the quantity of a drug goes below 10 so that the pharmacy can order more drugs and re-stock\n 
-            '''))
-            if choice2==1:
-                companyID=str(input("Enter the drug manufacturer ID: "))
-                embedded_query1(companyID)
-            elif choice2==2:
-                companyID=str(input("Enter the drug manufacturer ID: "))
-                embedded_query2(companyID)
-            elif choice2==3:
-                manager_query1()
-            elif choice2==4:
-                olap1()
-            elif choice2==5:
-                olap2()
-            elif choice2==6:
-                olap3()
-            elif choice2==7:
-                olap4()
-            elif choice2==8:
-                insertion_trigger()
-            elif choice2==9:
-                updation_trigger()
-            else:
-                print("Wrong choice\n")
-            ans2=str(input("Do you want to continue? y/n"))
-
-
 ans1='y'
 
 
@@ -362,10 +450,11 @@ if(choice0==1):
         if(choice01==1):
             login_flag=False
             x=Customer_login(login_flag)
+            print(x)
             if(x[0]==True):
                 flag=0
                 while ans1=="y":
-                    customer_queries_options(x[1])
+                    customer_queries_options(str(x[1]))
                     ans1=str(input("Do you want to continue? y/n"))
                 
         elif(choice01==2):
@@ -378,7 +467,7 @@ if(choice0==1):
                 if(y[0]==True):
                     flag=0
                     while ans1=="y":
-                        customer_queries_options(y[1])
+                        customer_queries_options(str(y[1]))
                         ans1=str(input("Do you want to continue? y/n"))
         else:
             print("WRONG CHOICE! Please Choose from the choices given: 1 or 2")
