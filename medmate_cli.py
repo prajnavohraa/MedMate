@@ -28,7 +28,7 @@ def customer_signup(signup_flag):
                         flag2=0
                         print("Welcome to MedMate. Your Account has Successfully been created. Please Proceed to Login")
                         signup_flag=True
-                    except errors.IntegrityError as e:
+                    except mysql.connector.errors.Error as e:
                         print("ERROR: ")
                         print(e)
                         flag2=0
@@ -81,104 +81,130 @@ def employee_login(login_flag):
 
 #Customer Menu
 def customer_queries_options(customer_id):
-    choice2=int(input('''Please choose from the below options:
-    1. Buy Medicines
-    2. View all medicines available
-    3. View Medicines by a specific Drug Manufacturer
-    4. View Cart
-    5. Delete medicines from cart
-    6. Proceed to Checkout
-    7.Log Out
-    Enter Choice
-    '''))
-    if choice2==1:
-        st='''select medicine.drugID "MedicineID",medicine.drugName "Medicine", medicine.drugPrice "Price(Rs)", medicine.drugManufacturingDate "ManufacturingDate", 
-        medicine.drugExpiryDate "ExpiryDate", medicine.drugQuantity "Quantity", drugManufacturer.manuCompanyName "ManufacturingCompany" from medicine 
-        inner join drugManufacturer where medicine.drugCompanyID=drugManufacturer.manuCompanyID;'''
-        mycur.execute(st)
-        recs=mycur.fetchall()
-        if len(recs)==0:
-            print("No records found")
-        else:
-            print("DISPLAYING DETAILS OF ALL MEDICINES AVAILABLE: \n")
-            display_table(recs, mycur.description)
-        answer="y"
-        while answer=="y":
-            options=int(input('''1.Add Medicines to cart\n2.Back\nEnter Option: '''))
-            if options==1:
-                drug_id=input("Enter Drug ID of medicine to be added: ")
-                requested_qty=input("Enter quantity of the drug you wish to buy: ")
-                checker="SELECT cartDrugID from productinfo where cartCustomerID="+customer_id
-                mycur.execute(checker)
-                checker_records=mycur.fetchall()
-                checker_records_int=[]
-                for x in checker_records:
-                    checker_records_int+=[x[0]]
-
-                #CASE 1: IF "the cart already contains the product, then update the quantity value"
-                if(int(drug_id) in checker_records_int):
-                    try:
-                        reduce_quantity='''UPDATE medicine set drugQuantity=drugQuantity-'''+requested_qty+'''
-                                    WHERE drugID='''+drug_id+''';'''
-                        mycur.execute(reduce_quantity)
-                        update_quantity='''UPDATE productinfo set cartDrugQuantity=cartDrugQuantity+'''+requested_qty+'''
-                                    WHERE cartCustomerID='''+customer_id+''' AND cartDrugID='''+drug_id+''';'''
-                        mycur.execute(update_quantity)
-                        print("Medicine with "+drug_id+" successfully added to cart")
-                        mydb.commit()
-                        get_cart_cost="select productinfo.cartCustomerID, productinfo.cartDrugID, medicine.drugPrice, productinfo.cartDrugQuantity from productinfo inner join medicine on productinfo.cartDrugID=medicine.drugID;"
-                        mycur.execute(get_cart_cost)
-                        get_cart_cost_recs=mycur.fetchall()
-                        cart_cost=0
-                        for x in get_cart_cost_recs:
-                            if x[0]==int(customer_id):
-                                cart_cost+=(int(x[2])*int(x[3]))
-                        print("Total cost of your cart: ",cart_cost)
-                        update_cart_cost="UPDATE cart set totalCost= "+str(cart_cost)+" where cartCustomerID ="+ str(customer_id) +" ;"
-                        mycur.execute(update_cart_cost)
-                        mydb.commit()
-
-                    except mysql.connector.Error as error:
-                        print("Error:")
-                        print(error)
-                        mydb.rollback()
-            
-                else:
-                    try:
-                        reduce_quantity='''UPDATE medicine set drugQuantity=drugQuantity-'''+requested_qty+'''
-                                    WHERE drugID='''+drug_id+''';'''
-                        mycur.execute(reduce_quantity)
-                        add_medicine_to_cart= "INSERT INTO productinfo values ('"+customer_id+"','"+drug_id+"','"+requested_qty+"');"
-                        mycur.execute(add_medicine_to_cart)
-                        print("Medicine with "+drug_id+" successfully added to cart")
-                        mydb.commit()
-                        get_cart_cost="select productinfo.cartCustomerID, productinfo.cartDrugID, medicine.drugPrice, productinfo.cartDrugQuantity from productinfo inner join medicine on productinfo.cartDrugID=medicine.drugID;"
-                        mycur.execute(get_cart_cost)
-                        get_cart_cost_recs=mycur.fetchall()
-                        cart_cost=0
-                        for x in get_cart_cost_recs:
-                            if x[0]==int(customer_id):
-                                cart_cost+=(int(x[2])*int(x[3]))
-                        print("Total cost of your cart: ",cart_cost)
-                        update_cart_cost="UPDATE cart set totalCost= "+str(cart_cost)+" where cartCustomerID ="+ str(customer_id) +" ;"
-                        mycur.execute(update_cart_cost)
-                        mydb.commit()
-
-                    except mysql.connector.Error as error:
-                        print("Error:")
-                        print(error)
-                        mydb.rollback()
-                
-            elif options==2:
-                answer="n"
+    hehe="y"
+    while hehe=="y":
+        choice2=int(input('''Please choose from the below options:
+        1. Buy Medicines
+        2. View all medicines available
+        3. View Medicines by a specific Drug Manufacturer
+        4. View Cart
+        5. Delete medicines from cart
+        6. Proceed to Checkout
+        7.Log Out
+        Enter Choice
+        '''))
+        if choice2==1:
+            st='''select medicine.drugID "MedicineID",medicine.drugName "Medicine", medicine.drugPrice "Price(Rs)", medicine.drugManufacturingDate "ManufacturingDate", 
+            medicine.drugExpiryDate "ExpiryDate", medicine.drugQuantity "Quantity", drugManufacturer.manuCompanyName "ManufacturingCompany" from medicine 
+            inner join drugManufacturer where medicine.drugCompanyID=drugManufacturer.manuCompanyID;'''
+            mycur.execute(st)
+            recs=mycur.fetchall()
+            if len(recs)==0:
+                print("No records found")
             else:
-                print("Please choose options between 1 and 2 only")
-                continue
-            
-    elif choice2==2:
-        show_medicines()
-    else:
-        print("Wrong Choice\n")
+                print("DISPLAYING DETAILS OF ALL MEDICINES AVAILABLE: \n")
+                display_table(recs, mycur.description)
+            answer="y"
+            while answer=="y":
+                options=int(input('''1.Add Medicines to cart\n2.Back\nEnter Option: '''))
+                if options==1:
+                    drug_id=input("Enter Drug ID of medicine to be added: ")
+                    requested_qty=input("Enter quantity of the drug you wish to buy: ")
+                    checker="SELECT cartDrugID from productinfo where cartCustomerID="+customer_id
+                    mycur.execute(checker)
+                    checker_records=mycur.fetchall()
+                    checker_records_int=[]
+                    for x in checker_records:
+                        checker_records_int+=[x[0]]
+
+                    #CASE 1: IF "the cart already contains the product, then update the quantity value"
+                    if(int(drug_id) in checker_records_int):
+                        try:
+                            reduce_quantity='''UPDATE medicine set drugQuantity=drugQuantity-'''+requested_qty+'''
+                                        WHERE drugID='''+drug_id+''';'''
+                            mycur.execute(reduce_quantity)
+                            update_quantity='''UPDATE productinfo set cartDrugQuantity=cartDrugQuantity+'''+requested_qty+'''
+                                        WHERE cartCustomerID='''+customer_id+''' AND cartDrugID='''+drug_id+''';'''
+                            mycur.execute(update_quantity)
+                            print("Medicine with "+drug_id+" successfully added to cart")
+                            mydb.commit()
+                            get_cart_cost="select productinfo.cartCustomerID, productinfo.cartDrugID, medicine.drugPrice, productinfo.cartDrugQuantity from productinfo inner join medicine on productinfo.cartDrugID=medicine.drugID;"
+                            mycur.execute(get_cart_cost)
+                            get_cart_cost_recs=mycur.fetchall()
+                            cart_cost=0
+                            for x in get_cart_cost_recs:
+                                if x[0]==int(customer_id):
+                                    cart_cost+=(int(x[2])*int(x[3]))
+                            print("Total cost of your cart: ",cart_cost)
+                            update_cart_cost="UPDATE cart set totalCost= "+str(cart_cost)+" where cartCustomerID ="+ str(customer_id) +" ;"
+                            mycur.execute(update_cart_cost)
+                            mydb.commit()
+
+                        except mysql.connector.Error as error:
+                            print("Error:")
+                            print(error)
+                            mydb.rollback()
+                
+                    else:
+                        try:
+                            reduce_quantity='''UPDATE medicine set drugQuantity=drugQuantity-'''+requested_qty+'''
+                                        WHERE drugID='''+drug_id+''';'''
+                            mycur.execute(reduce_quantity)
+                            add_medicine_to_cart= "INSERT INTO productinfo values ('"+customer_id+"','"+drug_id+"','"+requested_qty+"');"
+                            mycur.execute(add_medicine_to_cart)
+                            print("Medicine with "+drug_id+" successfully added to cart")
+                            mydb.commit()
+                            get_cart_cost="select productinfo.cartCustomerID, productinfo.cartDrugID, medicine.drugPrice, productinfo.cartDrugQuantity from productinfo inner join medicine on productinfo.cartDrugID=medicine.drugID;"
+                            mycur.execute(get_cart_cost)
+                            get_cart_cost_recs=mycur.fetchall()
+                            cart_cost=0
+                            for x in get_cart_cost_recs:
+                                if x[0]==int(customer_id):
+                                    cart_cost+=(int(x[2])*int(x[3]))
+                            print("Total cost of your cart: ",cart_cost)
+                            update_cart_cost="UPDATE cart set totalCost= "+str(cart_cost)+" where cartCustomerID ="+ str(customer_id) +" ;"
+                            mycur.execute(update_cart_cost)
+                            mydb.commit()
+
+                        except mysql.connector.Error as error:
+                            print("Error:")
+                            print(error)
+                            mydb.rollback()
+                    
+                elif options==2:
+                    answer="n"
+                else:
+                    print("Please choose options between 1 and 2 only")
+                    continue
+                
+        elif choice2==2:
+            show_medicines()
+
+        elif choice2==3:
+            companyID=str(input("Enter the drug manufacturer ID: "))
+            embedded_query1(companyID)
+
+        elif choice2==4:
+            view_cart='''select medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
+            from medicine inner join productinfo on medicine.drugID=productinfo.cartDrugID where cartCustomerID='''+customer_id+";"
+            mycur.execute(view_cart)
+            view_cart_recs=mycur.fetchall()
+            if len(view_cart_recs)==0:
+                print("Your Cart is Empty")
+            else:
+                print("YOUR CART:")
+                display_table(view_cart_recs, mycur.description)
+                total_cost="Select totalCost from cart where cartCustomerID="+customer_id+";"
+                mycur.execute(total_cost)
+                total_cost_recs=mycur.fetchone()
+                print("TOTAL COST OF CART: (RS)", total_cost_recs[0])
+        
+        elif choice2==7:
+            sure=input("Are you sure you want to LogOut? Y/N")
+            if sure=="Y" or sure=="y":
+                hehe="n"
+        else:
+            print("Wrong Choice\n")
 
 
 
