@@ -194,10 +194,21 @@ def customer_queries_options(customer_id):
             else:
                 print("YOUR CART:")
                 display_table(view_cart_recs, mycur.description)
-                total_cost="Select totalCost from cart where cartCustomerID="+customer_id+";"
-                mycur.execute(total_cost)
-                total_cost_recs=mycur.fetchone()
-                print("TOTAL COST OF CART: (RS)", total_cost_recs[0])
+                get_cart_cost="select productinfo.cartCustomerID, productinfo.cartDrugID, medicine.drugPrice, productinfo.cartDrugQuantity from productinfo inner join medicine on productinfo.cartDrugID=medicine.drugID;"
+                mycur.execute(get_cart_cost)
+                get_cart_cost_recs=mycur.fetchall()
+                cart_cost=0
+                for x in get_cart_cost_recs:
+                    if x[0]==int(customer_id):
+                        cart_cost+=(int(x[2])*int(x[3]))
+                print("Total cost of your cart: ",cart_cost)
+                update_cart_cost="UPDATE cart set totalCost= "+str(cart_cost)+" where cartCustomerID ="+ str(customer_id) +" ;"
+                mycur.execute(update_cart_cost)
+                mydb.commit()
+                # total_cost="Select totalCost from cart where cartCustomerID="+customer_id+";"
+                # mycur.execute(total_cost)
+                # total_cost_recs=mycur.fetchone()
+                # print("TOTAL COST OF CART: (RS)", total_cost_recs[0])
         elif choice2==5:
             view_cart='''select medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
             from medicine inner join productinfo on medicine.drugID=productinfo.cartDrugID where cartCustomerID='''+customer_id+";"
@@ -274,6 +285,107 @@ def customer_queries_options(customer_id):
                     print(error)
                     mydb.rollback()
             
+        elif choice2==6:
+            view_cart='''select medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
+            from medicine inner join productinfo on medicine.drugID=productinfo.cartDrugID where cartCustomerID='''+customer_id+";"
+            mycur.execute(view_cart)
+            view_cart_recs=mycur.fetchall()
+            if len(view_cart_recs)==0:
+                print("Your Cart is Empty")
+            else:
+                print("YOUR CART:")
+                display_table(view_cart_recs, mycur.description)
+            get_cart_cost="select productinfo.cartCustomerID, productinfo.cartDrugID, medicine.drugPrice, productinfo.cartDrugQuantity from productinfo inner join medicine on productinfo.cartDrugID=medicine.drugID;"
+            mycur.execute(get_cart_cost)
+            get_cart_cost_recs=mycur.fetchall()
+            cart_cost=0
+            for x in get_cart_cost_recs:
+                if x[0]==int(customer_id):
+                    cart_cost+=(int(x[2])*int(x[3]))
+            print("Total cost of your cart: ",cart_cost)
+            # update_cart_cost="UPDATE cart set totalCost= "+str(cart_cost)+" where cartCustomerID ="+ str(customer_id) +" ;"
+            # mycur.execute(update_cart_cost)
+            # mydb.commit()
+
+            # cart_total_cost="select totalCost from cart where cartCustomerID="+customer_id+";"
+            # mycur.execute(cart_total_cost)
+            # cart_total_cost_recs=mycur.fetchone()
+            # print("TOTAL CART PRICE IS: RS. ",cart_total_cost_recs)
+            
+
+            proceed_option=input("You are about to checkout. Do you want to proceed?\n1.Yes\n2.No\nEnter choice: ")
+            if(proceed_option=='1'):
+                if(cart_cost>10000):
+                    show_discounts="select discountID 'Discount ID', discountPercentage 'Discount %' from discount order by rand() limit 3;"
+                    mycur.execute(show_discounts)
+                    show_discounts_recs=mycur.fetchall()
+                    print(show_discounts_recs)
+                    print("Congratulations! You are eligible for these discounts: Please Select the one you would like to redeem")
+                    display_table(show_discounts_recs, mycur.description)
+                    choose_discount=input("Please enter the Discount ID of the discount coupon you would like to apply: ")
+                    discount_flag=0
+                    for x in show_discounts_recs:
+                        if x[0]==int(choose_discount):
+                            discounted_cart_cost="UPDATE cart set totalCost=totalCost-"+"totalCost * "+str(int(x[1])/100)+" where cartCustomerID="+customer_id
+                            mycur.execute(discounted_cart_cost)
+                            discount_flag=1
+                            mydb.commit()
+                            show_total_cost="select totalCost from cart where cartCustomerID="+customer_id+";"
+                            mycur.execute(show_total_cost)
+                            show_total_cost_recs=mycur.fetchone()
+                            print("TOTAL CHECKOUT PRICE IS: RS. ",show_total_cost_recs[0])
+                            break
+                    
+                    if(discount_flag==0):
+                        print("You do not have this discount coupon")
+                        continue
+                else:
+                    print("You are not eligible for any discounts")
+                    show_total_cost="select totalCost from cart where cartCustomerID="+customer_id+";"
+                    mycur.execute(show_total_cost)
+                    show_total_cost_recs=mycur.fetchone()
+                    print("TOTAL CHECKOUT PRICE IS: RS. ",show_total_cost_recs)
+
+            elif(proceed_option==2):
+                continue
+
+            show_total_cost="select totalCost from cart where cartCustomerID="+customer_id+";"
+            mycur.execute(show_total_cost)
+            show_total_cost_recs=mycur.fetchone()
+            final_total_cost=str(show_total_cost_recs[0])
+
+            delivery_address=input("Please enter your delivery Address: ")
+            cur_date="Select CURDATE();"
+            mycur.execute(cur_date)
+            cur_date_rec=mycur.fetchone()
+            todays_date= str(cur_date_rec[0])
+            place_order="INSERT INTO orderdetails values (DEFAULT,"+ final_total_cost+", '" + delivery_address+"', '"+todays_date+"',"+customer_id+");"
+            mycur.execute(place_order)
+            mydb.commit()
+
+            payment_method=input("Please enter mode of Payment:\n1.COD\n2.UPI\n3.CARD\nEnter Choice: ")
+            mode_of_payment=""
+            if payment_method=='1':
+                mode_of_payment="COD"
+            elif payment_method=='2':
+                mode_of_payment="UPI"
+            elif payment_method=='3':
+                mode_of_payment="CARD"
+            else:
+                print("WRONG CHOICE.")
+                continue
+
+            order_id="select orderID from orderdetails where cartID="+customer_id+";"
+            mycur.execute(order_id)
+            order_id_recs=mycur.fetchall()
+            order_id_string=str(order_id_recs[-1][0])
+            print(order_id_string)
+            mycur.execute("UPDATE billingdetails set modeOfPayment= '"+mode_of_payment+"' where medicineOrderID="+order_id_string+";")
+            mydb.commit()
+            print("Order has been placed! Your Order will be arriving in 3 business days")
+
+
+
 
         elif choice2==7:
             sure=input("Are you sure you want to LogOut? Y/N")
