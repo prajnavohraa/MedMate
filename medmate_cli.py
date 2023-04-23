@@ -5,6 +5,42 @@ mydb=mysql.connector.connect(host = "localhost", user = "root", passwd = "12345"
 mycur=mydb.cursor()
 mycur.execute("USE medmate")
 
+
+#Helper function to find maximum length of column needed for display
+def find_max_col_length(recs, col_index, col_name):
+    max_col_length = 0
+    for record in recs:
+        curr_length = len(str(record[col_index]))
+        if curr_length > max_col_length:
+            max_col_length = curr_length
+    return max(max_col_length, len(col_name))
+
+
+#Helper function to display the given table 'recs'
+def display_table(recs, table_desciption):
+    widths = []
+    columns = []
+    boundary = '|'
+    separator = '+'
+    index = 0
+    
+    for cd in table_desciption:
+        widths.append(find_max_col_length(recs, index, cd[0]))
+        columns.append(cd[0])
+        index+=1
+     
+    for w in widths:
+        boundary += " %-"+"%ss |" % (w,)
+        separator += '-'*w + '--+'
+     
+    print(separator)
+    print(boundary % tuple(columns))
+    print(separator)
+    for row in recs:
+        print(boundary % row)
+    print(separator)
+
+
 # Customer Sign Up
 def customer_signup(signup_flag):
     flag1=1
@@ -78,6 +114,109 @@ def employee_login(login_flag):
         else:
             print("Wrong Password. Please Try again")
     return [login_flag, recs[2]]
+
+
+def add_medicines_to_stock():
+    drug_name=input("Enter drug's Name: ")
+    drug_price=input("Enter drug's price: ")
+    manu_date=input("Enter drug's Manufacturing Date: ")
+    exp_date=input("Enter drug's expiry date: ")
+    drug_qty=input("Enter drug's quantity: ")
+    company_id=input("Enter manufacturing company's ID")
+
+    check_company_id= "select manuCompanyID from drugmanufacturer"
+    mycur.execute(check_company_id)
+    check_company_id_recs=mycur.fetchall()
+    company_id_list=[]
+    for x in check_company_id_recs:
+        company_id_list+=[x[0]]
+    if int(company_id) not in company_id_list:
+        print ("This Company ID does not exist. Please Try again")
+        return
+    else:
+        add_medicine="INSERT INTO medicine values(DEFAULT, '"+drug_name+"',"+drug_price+", '"+manu_date+"', '"+exp_date+"', "+drug_qty+", '"+company_id+"');"
+        mycur.execute(add_medicine)
+        mydb.commit()
+        print("Medicine has been successfully added to the stock")
+
+def delete_medicine_from_stock():
+    drug_id=input("Enter the drug ID of the medicine you want to delete: ")
+    check_drug_id= "select drugID from medicine;"
+    mycur.execute(check_drug_id)
+    check_drug_id_recs=mycur.fetchall()
+    check_drug_id_list=[]
+    for x in check_drug_id_recs:
+        check_drug_id_list+=[x[0]]
+    if int(drug_id) not in check_drug_id_list:
+        print ("This drug ID does not exist please try again")
+        return
+    else:
+        delete_medicine="delete from medicine where drugID="+drug_id
+        mycur.execute(delete_medicine)
+        mydb.commit()
+        print("Medicine has been successfully deleted from stock")
+
+
+
+def increase_quantity_of_med(drug_id, new_qty):
+    check_drug_id= "select drugID from medicine;"
+    mycur.execute(check_drug_id)
+    check_drug_id_recs=mycur.fetchall()
+    check_drug_id_list=[]
+    for x in check_drug_id_recs:
+        check_drug_id_list+=[x[0]]
+    if int(drug_id) not in check_drug_id_list:
+        print ("This drug ID does not exist please try again")
+        return
+    else:
+        update_qty="UPDATE medicine set drugQuantity=drugQuantity+"+new_qty+" where drugID="+drug_id
+        mycur.execute(update_qty)
+        mydb.commit()
+        print("Quantity of medicine has been successfully updated")
+
+
+def view_orders():
+    view_order_command='''
+    select orderdetails.orderDate "Date", billingdetails.medicineOrderID "Order ID", billingdetails.totalPrice "Price(Rs)", 
+    billingdetails.modeOfPayment "Payment Method", billingdetails.billingAddress "Delivery Address" 
+    from orderdetails inner join billingdetails on orderID=medicineOrderID where billingdetails.modeOfPayment in ('UPI','COD','CARD');'''
+
+    mycur.execute(view_order_command)
+    view_order_recs=mycur.fetchall()
+
+    if len(view_order_recs)==0:
+        print("No records found")
+        return
+    else:
+        print("ORDER DETAILS: ")
+        display_table(view_order_recs, mycur.description)
+
+
+def view_orders_between_dates(date1, date2):
+    view_order_command='''
+    select orderdetails.orderDate "Date", billingdetails.medicineOrderID "Order ID", billingdetails.totalPrice "Price(Rs)", 
+    billingdetails.modeOfPayment "Payment Method", billingdetails.billingAddress "Delivery Address" 
+    from orderdetails inner join billingdetails on orderID=medicineOrderID where billingdetails.modeOfPayment in ('UPI','COD','CARD')
+    AND orderdetails.orderDate BETWEEN '''+"'"+date1+"' AND "+"'"+date2+"'"
+
+    mycur.execute(view_order_command)
+    view_order_recs=mycur.fetchall()
+
+    if len(view_order_recs)==0:
+        print("No records found between the given dates")
+        return
+    else:
+        print("ORDER DETAILS: ")
+        display_table(view_order_recs, mycur.description)
+
+def summary():
+    show_summary="select sum(totalCost) 'Total Sale (Rs)' from cart"
+    mycur.execute(show_summary)
+    show_summary_recs=mycur.fetchall()
+    print('TOTAL SALES OF YOUR BRANCH')
+    display_table(show_summary_recs, mycur.description)
+
+summary()
 
 #Customer Menu
 def customer_queries_options(customer_id):
@@ -384,9 +523,6 @@ def customer_queries_options(customer_id):
             mydb.commit()
             print("Order has been placed! Your Order will be arriving in 3 business days")
 
-
-
-
         elif choice2==7:
             sure=input("Are you sure you want to LogOut? Y/N")
             if sure=="Y" or sure=="y":
@@ -396,82 +532,69 @@ def customer_queries_options(customer_id):
             print("Wrong Choice\n")
 
 
+def show_delivery_partners():
+    st="SELECT * FROM deliverypartner"
+    mycur.execute(st)
+    recs=mycur.fetchall()
+    display_table(recs,mycur.description)
 
 
 
+# EMPLOYEE MENU 
 
 def employee_query_options(id):
     ans2='y'
     if check_manager(id):
         while ans2=='y': 
-            choice2=int(input('''Please select the query you want to run:\n 
-            1. Display all drugs sold by a particular drug manufacturer\n 
-            2. Display the customer details of those who bought drugs from a particular company\n 
-            3.Display records of all employees\n
-            4. Run Olap query 1
-            5. Run Olap query 2
-            6. Run Olap query 3
-            7. Run Olap query 4
-            8. This trigger adds data to the billingdetails table as soon as an order is placed.
-            9. This trigger shows a message to the pharmacy when the quantity of a drug goes below 10 so that the pharmacy can order more drugs and re-stock\n 
-            '''))
+            choice2=int(input('''Please select the query you want to run:
+            1. Add new medicines to stock
+            2. Delete a medicine from stock
+            3. Increase quantity of a medicine in stock
+            4. View all medicines and their details
+            5. View medicines sold by a particular drug manufacturer
+            6. Display the customer details of those who bought drugs from a particular company
+            7. Display records of all employees
+            8. View all orders
+            9. View orders betweeen given dates
+            10. Get total sales of branch
+            11. Show details of delivery partners
+            12. Logout
+            Enter Choice: '''))
             if choice2==1:
+                add_medicines_to_stock()
+            elif choice2==2:
+                delete_medicine_from_stock()
+            elif choice2==3:
+                drug_id=input("Enter drug id which you want to update: ")
+                new_qty=input("Enter the quantity to be added: ")
+                increase_quantity_of_med(drug_id, new_qty)
+            elif choice2==4:
+                show_medicines()
+            elif choice2==5:
                 companyID=str(input("Enter the drug manufacturer ID: "))
                 embedded_query1(companyID)
-            elif choice2==2:
+            elif choice2==6:
                 companyID=str(input("Enter the drug manufacturer ID: "))
                 embedded_query2(companyID)
-            elif choice2==3:
-                manager_query1()
-            elif choice2==4:
-                olap1()
-            elif choice2==5:
-                olap2()
-            elif choice2==6:
-                olap3()
             elif choice2==7:
-                olap4()
+                manager_query1()
             elif choice2==8:
-                insertion_trigger()
+                view_orders()
             elif choice2==9:
-                updation_trigger()
+                date1=input("Enter start date: ")
+                date2=input("Enter end date: ")
+                view_orders_between_dates(date1,date2)
+            elif choice2==10:
+                summary()
+            elif choice2==11:
+                show_delivery_partners()
+            elif choice2==12:
+                ask=input("Are you sure you want to logout? Y/N")
+                if ask=='Y' or ask=='y':
+                    ans2='n'
             else:
-                print("Wrong choice\n")
-            ans2=str(input("Do you want to continue? y/n")) 
+                print("Wrong choice\n") 
 
-#Helper function to find maximum length of column needed for display
-def find_max_col_length(recs, col_index, col_name):
-    max_col_length = 0
-    for record in recs:
-        curr_length = len(str(record[col_index]))
-        if curr_length > max_col_length:
-            max_col_length = curr_length
-    return max(max_col_length, len(col_name))
-
-
-#Helper function to display the given table 'recs'
-def display_table(recs, table_desciption):
-    widths = []
-    columns = []
-    boundary = '|'
-    separator = '+'
-    index = 0
-    
-    for cd in table_desciption:
-        widths.append(find_max_col_length(recs, index, cd[0]))
-        columns.append(cd[0])
-        index+=1
-     
-    for w in widths:
-        boundary += " %-"+"%ss |" % (w,)
-        separator += '-'*w + '--+'
-     
-    print(separator)
-    print(boundary % tuple(columns))
-    print(separator)
-    for row in recs:
-        print(boundary % row)
-    print(separator)
 
 #added section--------------------
 
@@ -491,7 +614,7 @@ def count_on_mode_of_payment():
 def carts_eligible_for_discount():
     st='''SELECT customer.custName AS "Customers Eligible for Discount", cart.totalCost AS "Cart Cost (Rs)"FROM customer 
     INNER JOIN cart ON cart.cartCustomerID=customer.customerID 
-    WHERE cart.totalCost>5000 
+    WHERE cart.totalCost>10000 
     ORDER BY cart.totalCost DESC;'''
     mycur.execute(st)
     recs=mycur.fetchall()
@@ -500,6 +623,10 @@ def carts_eligible_for_discount():
     else:
         print("Displaying customer names and their cart's total cost who are eligible for a discount (with total cart cost greater than 5000)") 
         display_table(recs, mycur.description)
+
+
+
+
 
 #added section--------------------
 
@@ -654,6 +781,7 @@ def insertion_trigger():
 ans1='y'
 
 
+
 choice0=int(input('''WELCOME TO MEDMATE. YOUR ONLINE MEDICAL STORE. PLEASE ENTER THE REQUIRED NUMBER:
 1. CUSTOMER
 2. EMPLOYEE
@@ -698,6 +826,5 @@ elif(choice0==2):
             while ans1=="y":
                 employee_query_options(x[1])
                 ans1=str(input("Do you want to continue? y/n"))
-
 
 print("Bye Bye")
