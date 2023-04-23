@@ -88,7 +88,7 @@ def customer_queries_options(customer_id):
         2. View all medicines available
         3. View Medicines by a specific Drug Manufacturer
         4. View Cart
-        5. Delete medicines from cart
+        5. Remove medicines from cart or Update quantities
         6. Proceed to Checkout
         7.Log Out
         Enter Choice
@@ -198,10 +198,87 @@ def customer_queries_options(customer_id):
                 mycur.execute(total_cost)
                 total_cost_recs=mycur.fetchone()
                 print("TOTAL COST OF CART: (RS)", total_cost_recs[0])
-        
+        elif choice2==5:
+            view_cart='''select medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
+            from medicine inner join productinfo on medicine.drugID=productinfo.cartDrugID where cartCustomerID='''+customer_id+";"
+            mycur.execute(view_cart)
+            view_cart_recs=mycur.fetchall()
+            if len(view_cart_recs)==0:
+                print("Your Cart is Empty")
+            else:
+                print("YOUR CART:")
+                display_table(view_cart_recs, mycur.description)
+            drug_id=input("Enter Drug ID of medicine to be deleted/ update quantity of: ")
+            requested_qty=input("Enter updated quantity of drug (0 in case of deletion): ")
+            checker="SELECT cartDrugID from productinfo where cartCustomerID="+customer_id
+            mycur.execute(checker)
+            checker_records=mycur.fetchall()
+            checker_records_int=[]
+            for x in checker_records:
+                checker_records_int+=[x[0]]
+            
+            if(int(drug_id) not in checker_records_int):
+                print("You do not have this drug in your cart")
+                continue
+
+            elif(int(drug_id) in checker_records_int):
+                try:
+                    find_current_qty="SELECT cartDrugQuantity from productinfo where cartCustomerID="+customer_id+" and cartDrugID="+drug_id
+                    mycur.execute(find_current_qty)
+                    find_current_qty_recs= mycur.fetchone()
+                    current_qty=str(find_current_qty_recs[0])
+                    
+                    if requested_qty=="0":
+                        
+                        update_quantity='''UPDATE medicine set drugQuantity=drugQuantity+'''+current_qty+''' WHERE drugID='''+drug_id+''';'''
+                        mycur.execute(update_quantity)
+                        delete_from_cart="delete from productinfo where cartDrugID="+drug_id+" and cartCustomerID="+customer_id
+                        mycur.execute(delete_from_cart)
+                        print("Medicine with "+drug_id+" successfully removed from your cart")
+                        mydb.commit()
+
+                    else:
+                        stock_qty=str(int(current_qty)-int(requested_qty))
+                        update_quantity='''UPDATE medicine set drugQuantity= drugQuantity +'''+stock_qty+ ''' WHERE drugID='''+drug_id+''';'''
+                        mycur.execute(update_quantity)
+                        reduce_quantity='''UPDATE productinfo set cartDrugQuantity='''+requested_qty+''' WHERE cartCustomerID='''+customer_id+''' AND cartDrugID='''+drug_id+''';'''
+                        mycur.execute(reduce_quantity)
+                        print("Quantity of Medicine with "+drug_id+" successfully updated to "+requested_qty)
+                        mydb.commit()
+                    
+                    view_cart='''select medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
+                    from medicine inner join productinfo on medicine.drugID=productinfo.cartDrugID where cartCustomerID='''+customer_id+";"
+                    mycur.execute(view_cart)
+                    view_cart_recs=mycur.fetchall()
+                    if len(view_cart_recs)==0:
+                        print("Your Cart is Empty")
+                    else:
+                        print("YOUR UPDATED CART:")
+                        display_table(view_cart_recs, mycur.description)
+
+                    
+                    get_cart_cost="select productinfo.cartCustomerID, productinfo.cartDrugID, medicine.drugPrice, productinfo.cartDrugQuantity from productinfo inner join medicine on productinfo.cartDrugID=medicine.drugID;"
+                    mycur.execute(get_cart_cost)
+                    get_cart_cost_recs=mycur.fetchall()
+                    cart_cost=0
+                    for x in get_cart_cost_recs:
+                        if x[0]==int(customer_id):
+                            cart_cost+=(int(x[2])*int(x[3]))
+                    print("Total cost of your cart: ",cart_cost)
+                    update_cart_cost="UPDATE cart set totalCost= "+str(cart_cost)+" where cartCustomerID ="+ str(customer_id) +" ;"
+                    mycur.execute(update_cart_cost)
+                    mydb.commit()
+
+                except mysql.connector.Error as error:
+                    print("Error:")
+                    print(error)
+                    mydb.rollback()
+            
+
         elif choice2==7:
             sure=input("Are you sure you want to LogOut? Y/N")
             if sure=="Y" or sure=="y":
+                answer="n"
                 hehe="n"
         else:
             print("Wrong Choice\n")
