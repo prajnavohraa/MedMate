@@ -88,7 +88,7 @@ def Customer_login(login_flag):
             print("No such account. Please Try again")
             continue
         if recs[0]==customer_Password:
-            print("Successfully Logged in as "+ recs[1]+"\n")
+            print("\nSuccessfully Logged in as "+ recs[1]+"\n")
             login_flag=True
             flag=0
         else:
@@ -117,6 +117,7 @@ def employee_login(login_flag):
 
 
 def add_medicines_to_stock():
+
     drug_name=input("Enter drug's Name: ")
     drug_price=input("Enter drug's price: ")
     manu_date=input("Enter drug's Manufacturing Date: ")
@@ -134,10 +135,17 @@ def add_medicines_to_stock():
         print ("This Company ID does not exist. Please Try again")
         return
     else:
-        add_medicine="INSERT INTO medicine values(DEFAULT, '"+drug_name+"',"+drug_price+", '"+manu_date+"', '"+exp_date+"', "+drug_qty+", '"+company_id+"');"
-        mycur.execute(add_medicine)
-        mydb.commit()
-        print("Medicine has been successfully added to the stock")
+        try:
+            add_medicine="INSERT INTO medicine values(DEFAULT, '"+drug_name+"',"+drug_price+", '"+manu_date+"', '"+exp_date+"', "+drug_qty+", '"+company_id+"');"
+            mycur.execute(add_medicine)
+            mydb.commit()
+            print("Medicine "+drug_name+" has been successfully added to the stock")
+
+        except mysql.connector.Error as error:
+                print("Error:")
+                print(error)
+                mydb.rollback()
+
 
 def delete_medicine_from_stock():
     drug_id=input("Enter the drug ID of the medicine you want to delete: ")
@@ -154,7 +162,7 @@ def delete_medicine_from_stock():
         delete_medicine="delete from medicine where drugID="+drug_id
         mycur.execute(delete_medicine)
         mydb.commit()
-        print("Medicine has been successfully deleted from stock")
+        print("Medicine with drug ID " +drug_id+" has been successfully deleted from stock")
 
 
 
@@ -216,36 +224,35 @@ def summary():
     print('TOTAL SALES OF YOUR BRANCH')
     display_table(show_summary_recs, mycur.description)
 
-summary()
+
 
 #Customer Menu
 def customer_queries_options(customer_id):
     hehe="y"
     while hehe=="y":
-        choice2=int(input('''Please choose from the below options:
-        1. Buy Medicines
-        2. View all medicines available
-        3. View Medicines by a specific Drug Manufacturer
-        4. View Cart
-        5. Remove medicines from cart or Update quantities
-        6. Proceed to Checkout
-        7.Log Out
-        Enter Choice
-        '''))
+        choice2=int(input('''Please choose from the below options:\n
+1. Buy Medicines
+2. View all medicines available
+3. View Medicines by a specific Drug Manufacturer
+4. View Cart
+5. Remove medicines from cart or Update quantities
+6. Proceed to Checkout
+7.Log Out
+Enter Choice: '''))
         if choice2==1:
             st='''select medicine.drugID "MedicineID",medicine.drugName "Medicine", medicine.drugPrice "Price(Rs)", medicine.drugManufacturingDate "ManufacturingDate", 
             medicine.drugExpiryDate "ExpiryDate", medicine.drugQuantity "Quantity", drugManufacturer.manuCompanyName "ManufacturingCompany" from medicine 
-            inner join drugManufacturer where medicine.drugCompanyID=drugManufacturer.manuCompanyID;'''
+            inner join drugManufacturer where medicine.drugCompanyID=drugManufacturer.manuCompanyID and drugQuantity>=10;'''
             mycur.execute(st)
             recs=mycur.fetchall()
             if len(recs)==0:
                 print("No records found")
             else:
-                print("DISPLAYING DETAILS OF ALL MEDICINES AVAILABLE: \n")
+                print("\n--------------------------------------------------------------DISPLAYING DETAILS OF ALL MEDICINES AVAILABLE-------------------------------------------------------------- \n")
                 display_table(recs, mycur.description)
             answer="y"
             while answer=="y":
-                options=int(input('''1.Add Medicines to cart\n2.Back\nEnter Option: '''))
+                options=int(input('''\n1. Add Medicines to cart\n2. Back\nEnter Option: '''))
                 if options==1:
                     drug_id=input("Enter Drug ID of medicine to be added: ")
                     requested_qty=input("Enter quantity of the drug you wish to buy: ")
@@ -274,6 +281,15 @@ def customer_queries_options(customer_id):
                             for x in get_cart_cost_recs:
                                 if x[0]==int(customer_id):
                                     cart_cost+=(int(x[2])*int(x[3]))
+                            view_cart='''select medicine.drugID "Drug ID", medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
+                            from medicine inner join productinfo on medicine.drugID=productinfo.cartDrugID where cartCustomerID='''+customer_id+";"
+                            mycur.execute(view_cart)
+                            view_cart_recs=mycur.fetchall()
+                            if len(view_cart_recs)==0:
+                                print("Your Cart is Empty")
+                            else:
+                                print("YOUR CART:")
+                                display_table(view_cart_recs, mycur.description)
                             print("Total cost of your cart: ",cart_cost)
                             update_cart_cost="UPDATE cart set totalCost= "+str(cart_cost)+" where cartCustomerID ="+ str(customer_id) +" ;"
                             mycur.execute(update_cart_cost)
@@ -300,6 +316,15 @@ def customer_queries_options(customer_id):
                             for x in get_cart_cost_recs:
                                 if x[0]==int(customer_id):
                                     cart_cost+=(int(x[2])*int(x[3]))
+                            view_cart='''select medicine.drugID "Drug ID", medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
+                            from medicine inner join productinfo on medicine.drugID=productinfo.cartDrugID where cartCustomerID='''+customer_id+";"
+                            mycur.execute(view_cart)
+                            view_cart_recs=mycur.fetchall()
+                            if len(view_cart_recs)==0:
+                                print("Your Cart is Empty")
+                            else:
+                                print("YOUR CART:")
+                                display_table(view_cart_recs, mycur.description)
                             print("Total cost of your cart: ",cart_cost)
                             update_cart_cost="UPDATE cart set totalCost= "+str(cart_cost)+" where cartCustomerID ="+ str(customer_id) +" ;"
                             mycur.execute(update_cart_cost)
@@ -309,6 +334,7 @@ def customer_queries_options(customer_id):
                             print("Error:")
                             print(error)
                             mydb.rollback()
+                    
                     
                 elif options==2:
                     answer="n"
@@ -324,7 +350,7 @@ def customer_queries_options(customer_id):
             embedded_query1(companyID)
 
         elif choice2==4:
-            view_cart='''select medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
+            view_cart='''select medicine.drugID "Drug ID", medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
             from medicine inner join productinfo on medicine.drugID=productinfo.cartDrugID where cartCustomerID='''+customer_id+";"
             mycur.execute(view_cart)
             view_cart_recs=mycur.fetchall()
@@ -349,7 +375,7 @@ def customer_queries_options(customer_id):
                 # total_cost_recs=mycur.fetchone()
                 # print("TOTAL COST OF CART: (RS)", total_cost_recs[0])
         elif choice2==5:
-            view_cart='''select medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
+            view_cart='''select medicine.drugID "Drug ID", medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
             from medicine inner join productinfo on medicine.drugID=productinfo.cartDrugID where cartCustomerID='''+customer_id+";"
             mycur.execute(view_cart)
             view_cart_recs=mycur.fetchall()
@@ -396,7 +422,7 @@ def customer_queries_options(customer_id):
                         print("Quantity of Medicine with "+drug_id+" successfully updated to "+requested_qty)
                         mydb.commit()
                     
-                    view_cart='''select medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
+                    view_cart='''select medicine.drugID "Drug ID", medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
                     from medicine inner join productinfo on medicine.drugID=productinfo.cartDrugID where cartCustomerID='''+customer_id+";"
                     mycur.execute(view_cart)
                     view_cart_recs=mycur.fetchall()
@@ -425,7 +451,7 @@ def customer_queries_options(customer_id):
                     mydb.rollback()
             
         elif choice2==6:
-            view_cart='''select medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
+            view_cart='''select medicine.drugID "Drug ID", medicine.drugName "Medicine Name", medicine.drugPrice "Price (RS)", productinfo.cartDrugQuantity "Quantity" 
             from medicine inner join productinfo on medicine.drugID=productinfo.cartDrugID where cartCustomerID='''+customer_id+";"
             mycur.execute(view_cart)
             view_cart_recs=mycur.fetchall()
@@ -451,6 +477,9 @@ def customer_queries_options(customer_id):
             # cart_total_cost_recs=mycur.fetchone()
             # print("TOTAL CART PRICE IS: RS. ",cart_total_cost_recs)
             
+            if len(view_cart_recs)==0:
+                print("You do not have anything in your cart. Please add products to cart before checking out")
+                continue
 
             proceed_option=input("You are about to checkout. Do you want to proceed?\n1.Yes\n2.No\nEnter choice: ")
             if(proceed_option=='1'):
@@ -479,13 +508,17 @@ def customer_queries_options(customer_id):
                         print("You do not have this discount coupon")
                         continue
                 else:
-                    print("You are not eligible for any discounts")
+                    print("\nYou are not eligible for any discounts")
                     show_total_cost="select totalCost from cart where cartCustomerID="+customer_id+";"
                     mycur.execute(show_total_cost)
                     show_total_cost_recs=mycur.fetchone()
-                    print("TOTAL CHECKOUT PRICE IS: RS. ",show_total_cost_recs)
+                    print("TOTAL CHECKOUT PRICE IS: RS. ",show_total_cost_recs[0])
 
-            elif(proceed_option==2):
+            elif(proceed_option=='2'):
+                continue
+
+            else:
+                print("WRONG OPTION PLEASE TRY AGAIN")
                 continue
 
             show_total_cost="select totalCost from cart where cartCustomerID="+customer_id+";"
@@ -493,7 +526,7 @@ def customer_queries_options(customer_id):
             show_total_cost_recs=mycur.fetchone()
             final_total_cost=str(show_total_cost_recs[0])
 
-            delivery_address=input("Please enter your delivery Address: ")
+            delivery_address=input("\nPlease enter your delivery Address: ")
             cur_date="Select CURDATE();"
             mycur.execute(cur_date)
             cur_date_rec=mycur.fetchone()
@@ -502,7 +535,7 @@ def customer_queries_options(customer_id):
             mycur.execute(place_order)
             mydb.commit()
 
-            payment_method=input("Please enter mode of Payment:\n1.COD\n2.UPI\n3.CARD\nEnter Choice: ")
+            payment_method=input("\nPlease enter mode of Payment:\n1. COD\n2. UPI\n3. CARD\nEnter Choice: ")
             mode_of_payment=""
             if payment_method=='1':
                 mode_of_payment="COD"
@@ -523,8 +556,23 @@ def customer_queries_options(customer_id):
             mydb.commit()
             print("Order has been placed! Your Order will be arriving in 3 business days")
 
+            try:
+                # once an order is placed, the cart becomes empty again
+                clear_cart_cost="UPDATE cart set totalCost=0 where cartCustomerID="+customer_id
+                mycur.execute(clear_cart_cost)
+                remove_previous_items="DELETE from productinfo where cartCustomerID="+customer_id
+                mycur.execute(remove_previous_items)
+                mydb.commit()
+            
+            except mysql.connector.Error as error:
+                print("Error:")
+                print(error)
+                mydb.rollback()
+
+
+
         elif choice2==7:
-            sure=input("Are you sure you want to LogOut? Y/N")
+            sure=input("Are you sure you want to LogOut? Y/N: ")
             if sure=="Y" or sure=="y":
                 answer="n"
                 hehe="n"
@@ -546,20 +594,20 @@ def employee_query_options(id):
     ans2='y'
     if check_manager(id):
         while ans2=='y': 
-            choice2=int(input('''Please select the query you want to run:
-            1. Add new medicines to stock
-            2. Delete a medicine from stock
-            3. Increase quantity of a medicine in stock
-            4. View all medicines and their details
-            5. View medicines sold by a particular drug manufacturer
-            6. Display the customer details of those who bought drugs from a particular company
-            7. Display records of all employees
-            8. View all orders
-            9. View orders betweeen given dates
-            10. Get total sales of branch
-            11. Show details of delivery partners
-            12. Logout
-            Enter Choice: '''))
+            choice2=int(input('''\nPlease select the query you want to run:
+1. Add new medicines to stock
+2. Delete a medicine from stock
+3. Increase quantity of a medicine in stock
+4. View all medicines and their details
+5. View medicines sold by a particular drug manufacturer
+6. Display the customer details of those who bought drugs from a particular company
+7. Display records of all employees
+8. View all orders
+9. View orders betweeen given dates
+10. Get total sales of branch
+11. Show details of delivery partners
+12. Logout
+Enter Choice: '''))
             if choice2==1:
                 add_medicines_to_stock()
             elif choice2==2:
@@ -589,9 +637,10 @@ def employee_query_options(id):
             elif choice2==11:
                 show_delivery_partners()
             elif choice2==12:
-                ask=input("Are you sure you want to logout? Y/N")
+                ask=input("Are you sure you want to logout? Y/N: ")
                 if ask=='Y' or ask=='y':
                     ans2='n'
+                    return
             else:
                 print("Wrong choice\n") 
 
@@ -621,7 +670,7 @@ def carts_eligible_for_discount():
     if len(recs)==0:
         print("No records found")
     else:
-        print("Displaying customer names and their cart's total cost who are eligible for a discount (with total cart cost greater than 5000)") 
+        print("Displaying customer names and their cart's total cost who are eligible for a discount (with total cart cost greater than 10000)") 
         display_table(recs, mycur.description)
 
 
@@ -781,50 +830,62 @@ def insertion_trigger():
 ans1='y'
 
 
+flag2=1
+while(flag2==1):
+    choice0=int(input('''\n--------------------------------------------------------------WELCOME TO MEDMATE. YOUR ONLINE MEDICAL STORE--------------------------------------------------------------
 
-choice0=int(input('''WELCOME TO MEDMATE. YOUR ONLINE MEDICAL STORE. PLEASE ENTER THE REQUIRED NUMBER:
+PLEASE ENTER THE REQUIRED NUMBER:
+
 1. CUSTOMER
 2. EMPLOYEE
 Enter Choice: '''))
-if(choice0==1):
-    flag=1
-    while(flag==1):
-        choice01=int(input('''1. LOGIN\n2. SIGNUP\nEnter Choice: '''))
-        if(choice01==1):
-            login_flag=False
-            x=Customer_login(login_flag)
-            print(x)
-            if(x[0]==True):
-                flag=0
-                while ans1=="y":
-                    customer_queries_options(str(x[1]))
-                    ans1=str(input("Do you want to continue? y/n"))
-                
-        elif(choice01==2):
-            signup_flag=False
-            x=customer_signup(signup_flag)
-            flag=0
-            if x==True:
+
+    if(choice0==1):
+        flag=1
+        while(flag==1):
+            choice01=int(input('''\n1. LOGIN\n2. SIGNUP\nEnter Choice: '''))
+            if(choice01==1):
                 login_flag=False
-                y=Customer_login(login_flag)
-                if(y[0]==True):
+                x=Customer_login(login_flag)
+                # print(x)
+                if(x[0]==True):
                     flag=0
-                    while ans1=="y":
+                    # while ans1=="y":
+                    customer_queries_options(str(x[1]))
+                        # ans1=str(input("Do you want to continue? y/n"))
+                    
+            elif(choice01==2):
+                signup_flag=False
+                x=customer_signup(signup_flag)
+                flag=0
+                if x==True:
+                    login_flag=False
+                    y=Customer_login(login_flag)
+                    if(y[0]==True):
+                        # while ans1=="y":
                         customer_queries_options(str(y[1]))
-                        ans1=str(input("Do you want to continue? y/n"))
-        else:
-            print("WRONG CHOICE! Please Choose from the choices given: 1 or 2")
+                        flag=0
+            
+            else:
+                print("WRONG CHOICE! Please Choose from the choices given: 1 or 2")
+                continue
 
-elif(choice0==2):
-    flag=1
-    while(flag==1):
-        print("Please Login to your account:")
-        login_flag=False
-        x=employee_login(login_flag)
-        if(x[0]==True):
-            flag=0
-            while ans1=="y":
+            flag2=int(input("Do you want to continue?\n1. Yes\n2. No\nEnter Choice: "))
+
+    elif(choice0==2):
+        flag=1
+        while(flag==1):
+            print("Please Login to your account:")
+            login_flag=False
+            x=employee_login(login_flag)
+            if(x[0]==True):
+                # while ans1=="y":
                 employee_query_options(x[1])
-                ans1=str(input("Do you want to continue? y/n"))
+                flag=0
+        
+        flag2=int(input("Do you want to continue?\n1. Yes\n2. No\nEnter Choice: "))
 
+    else:
+        print("Wrong Choice! Please Choose only between the given options")
+        continue
 print("Bye Bye")
